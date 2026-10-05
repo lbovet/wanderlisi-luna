@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f6f4ef">
+  <meta name="description" content="Wanderlisi – deine Wanderungen in der Schweiz">
+  <title>wanderlisi · deine Wanderungen</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%231d5d50'/%3E%3Cpath d='M8 45 25 19l8 13 6-8 17 21H8Z' fill='%23f4c95d'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="wanderlisi Startseite">
+      <span class="brand-mark" aria-hidden="true"><span></span><i></i></span>
+      <span>wanderlisi</span>
+    </a>
+    <div class="top-actions">
+      <button class="icon-button" id="help-button" aria-label="Hilfe" title="Hilfe">?</button>
+      <button class="primary-button" id="new-walk-button"><span aria-hidden="true">＋</span> Wanderung hinzufügen</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <aside class="sidebar" aria-label="Wanderungen">
+      <div class="sidebar-heading">
+        <div>
+          <p class="eyebrow">Meine Sammlung</p>
+          <h1>Wanderungen <span id="walk-count">0</span></h1>
+        </div>
+        <button class="filter-button" id="filter-button" aria-expanded="false" title="Filtern">☷</button>
+      </div>
+      <div class="filters" id="filters" hidden>
+        <label>Anzeige
+          <select id="status-filter">
+            <option value="all">Alle Wanderungen</option>
+            <option value="todo">Noch nicht gemacht</option>
+            <option value="done">Gemacht</option>
+          </select>
+        </label>
+        <label class="search-field"><span aria-hidden="true">⌕</span><input id="search-input" type="search" placeholder="Wanderung suchen …"></label>
+      </div>
+      <div class="walk-list" id="walk-list" role="list"></div>
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">⌁</div>
+        <h2>Noch keine Wanderungen</h2>
+        <p>Importiere eine GPX-Datei und deine Sammlung wird hier sichtbar.</p>
+        <button class="secondary-button" id="empty-add-button">Erste Wanderung importieren</button>
+      </div>
+      <div class="sidebar-footer"><span class="legend-dot done"></span> gemacht <span class="legend-dot todo"></span> geplant</div>
+    </aside>
+
+    <section class="map-panel" aria-label="Karte">
+      <div id="map" role="application" aria-label="Schweizer Wanderkarte"></div>
+      <div class="map-overlay top-left"><div class="map-note"><span class="pulse"></span><span id="map-summary">Deine Schweiz</span></div></div>
+      <div class="map-overlay bottom-right"><button class="map-control" id="locate-button" title="Schweiz anzeigen">⌖</button><button class="map-control" id="fit-button" title="Alle Wanderungen anzeigen">⤢</button></div>
+      <div class="map-fallback" id="map-fallback" hidden>Die Karte konnte nicht geladen werden. Deine Wanderungen sind weiterhin in der Liste verfügbar.</div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="editor-modal" hidden>
+    <section class="modal editor-modal" role="dialog" aria-modal="true" aria-labelledby="editor-title">
+      <button class="modal-close" data-close-modal aria-label="Schliessen">×</button>
+      <div class="modal-header"><p class="eyebrow">Wanderung</p><h2 id="editor-title">Neue Wanderung</h2><p class="modal-intro">Importiere deinen Track und ergänze die wichtigsten Details.</p></div>
+      <form id="walk-form">
+        <input type="hidden" id="walk-id">
+        <div class="gpx-drop" id="gpx-drop"><input id="gpx-input" type="file" accept=".gpx,application/gpx+xml" hidden><span class="upload-icon">↥</span><strong>GPX-Datei hier ablegen</strong><span>oder <button type="button" class="text-button" id="choose-gpx">Datei auswählen</button></span><small id="gpx-filename">Noch keine Datei ausgewählt</small></div>
+        <div class="form-grid">
+          <label class="wide">Titel<input id="title-input" required maxlength="120" placeholder="z. B. First – Faulhorn – Schynige Platte"></label>
+          <label>Schwierigkeit<select id="difficulty-input"><option>T1</option><option selected>T2</option><option>T3</option><option>T4</option><option>T5</option><option>T6</option></select></label>
+          <label>Status<select id="status-input"><option value="todo">Noch nicht gemacht</option><option value="done">Gemacht</option></select></label>
+          <label>Dauer<input id="duration-input" placeholder="z. B. 05:30 h"></label>
+          <label>Distanz (km)<input id="distance-input" inputmode="decimal" type="number" min="0" step="0.1"></label>
+          <label>Aufstieg (m)<input id="ascent-input" inputmode="numeric" type="number" min="0" step="1"></label>
+          <label>Abstieg (m)<input id="descent-input" inputmode="numeric" type="number" min="0" step="1"></label>
+          <label class="wide">Beschreibung<textarea id="description-input" rows="3" placeholder="Eine kurze Beschreibung deiner Wanderung …"></textarea></label>
+        </div>
+        <div class="form-actions"><button type="button" class="secondary-button" data-close-modal>Abbrechen</button><button class="primary-button" type="submit">Wanderung speichern</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="detail-modal" hidden>
+    <section class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
+      <button class="modal-close" data-close-modal aria-label="Schliessen">×</button>
+      <div class="detail-hero"><div class="detail-hero-image" id="detail-cover"></div><div class="detail-hero-content"><span class="status-pill" id="detail-status"></span><h2 id="detail-title"></h2><div class="detail-meta" id="detail-meta"></div></div></div>
+      <div class="detail-body"><div class="detail-main"><p class="detail-description" id="detail-description"></p><div class="detail-section-heading"><h3>Dein Track</h3><button class="text-button" id="detail-fit">Auf Karte zeigen ↗</button></div><div class="detail-map" id="detail-map"></div><div class="detail-section-heading"><h3>Inspiration</h3><span class="muted">Bilder aus dem Web</span></div><div class="image-grid" id="internet-images"></div><div class="detail-section-heading"><h3>Meine Bilder</h3><label class="text-button upload-own"><input type="file" id="own-image-input" accept="image/*" multiple hidden>＋ Bilder hinzufügen</label></div><div class="image-grid own-images" id="own-images"></div></div><aside class="detail-aside"><div class="stat-list" id="detail-stats"></div><button class="ai-button" id="ai-button">✦ Beschreibung mit KI erstellen</button><div class="detail-actions"><button class="secondary-button" id="edit-button">Bearbeiten</button><button class="danger-button" id="delete-button">Löschen</button></div></aside></div>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
