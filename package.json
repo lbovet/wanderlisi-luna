@@ -1,0 +1,7 @@
+{
+  "name": "wanderlisi-luna",
+  "private": true,
+  "scripts": {
+    "start": "bun index.js"
+  }
+}

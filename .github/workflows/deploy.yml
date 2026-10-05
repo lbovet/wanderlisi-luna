@@ -1,0 +1,48 @@
+name: Deploy to Dokku
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DOKKU_APP: wanderlisi-luna
+  APP_ALIAS: wanderlisi-luna.chee.li
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.DOKKU_DEPLOY_KEY }}
+
+      - name: Create app
+        run: .github/scripts/dokku.sh apps:create ${{ env.DOKKU_APP }} || true
+
+      - name: Set domain alias
+        run: .github/scripts/dokku.sh domains:set ${{ env.DOKKU_APP }} ${{ env.APP_ALIAS }}
+
+      - name: Configure port mappings
+        run: .github/scripts/dokku.sh ports:set ${{ env.DOKKU_APP }} http:80:3000 https:443:3000
+
+      - name: Connect to cloudbox network
+        run: |
+          .github/scripts/dokku.sh network:create cloudbox || true
+          .github/scripts/dokku.sh network:set ${{ env.DOKKU_APP }} attach-post-deploy cloudbox
+
+      - name: Set build CPU limit
+        run: .github/scripts/dokku.sh resource:limit ${{ env.DOKKU_APP }} --process-type build --cpu 0.5
+
+      - name: Deploy to Dokku
+        uses: dokku/github-action@v1
+        with:
+          git_remote_url: ssh://dokku@cloudbox.chee.li:22/${{ env.DOKKU_APP }}
+          ssh_private_key: ${{ secrets.DOKKU_DEPLOY_KEY }}
+
+      - name: Enable Let's Encrypt
+        run: .github/scripts/dokku.sh letsencrypt:enable ${{ env.DOKKU_APP }}
