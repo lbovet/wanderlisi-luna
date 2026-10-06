@@ -30,6 +30,9 @@ jobs:
       - name: Configure port mappings
         run: .github/scripts/dokku.sh ports:set ${{ env.DOKKU_APP }} http:80:3000 https:443:3000
 
+      - name: Enable login auth
+        run: .github/scripts/dokku.sh login-auth:enable-form ${{ env.DOKKU_APP }}
+
       - name: Connect to cloudbox network
         run: |
           .github/scripts/dokku.sh network:create cloudbox || true
